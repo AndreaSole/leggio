@@ -33,8 +33,9 @@ Un solo eseguibile per Windows e per Linux.
 ## Usarlo
 
 Gli eseguibili sono nella pagina
-[Releases](https://github.com/AndreaSole/leggio/releases): `leggio.exe` per
-Windows, `leggio-linux-amd64` per Linux.
+[Releases](https://github.com/AndreaSole/leggio/releases): lo `.zip` per
+Windows contiene `leggio.exe`, il `.tar.gz` per Linux `leggio-linux-amd64`
+(c'è anche la versione arm64).
 
 ### Windows
 
