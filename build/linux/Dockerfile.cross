@@ -1,0 +1,23 @@
+# Compila Leggio per Linux amd64 da una macchina arm64 (Mac Apple Silicon):
+# Go e gcc girano nativi, le librerie GTK/WebKit sono quelle amd64 di Ubuntu
+# installate accanto (multiarch). Emulare l'amd64 con QEMU invece fa
+# crollare il compilatore Go.
+FROM arm64v8/ubuntu:22.04
+ARG GO_VERSION=1.26.4
+RUN dpkg --add-architecture amd64 \
+    && sed -i 's/^deb /deb [arch=arm64] /' /etc/apt/sources.list \
+    && printf '%s\n' \
+       'deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy main universe' \
+       'deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-updates main universe' \
+       'deb [arch=amd64] http://security.ubuntu.com/ubuntu jammy-security main universe' \
+       > /etc/apt/sources.list.d/amd64.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       ca-certificates curl pkg-config gcc-x86-64-linux-gnu libc6-dev-amd64-cross \
+       libgtk-3-dev:amd64 libwebkit2gtk-4.1-dev:amd64 \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz | tar -C /usr/local -xz
+ENV PATH=/usr/local/go/bin:$PATH GOFLAGS=-buildvcs=false \
+    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-gnu-gcc \
+    PKG_CONFIG_LIBDIR=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+WORKDIR /src

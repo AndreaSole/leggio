@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http: https:; media-src 'self' data: http: https:; font-src 'self' data:; connect-src 'self' ws: wss:">
+<title>Leggio</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/__chroma.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <header class="side-head">
+      <span class="side-title">Leggio</span>
+      <div class="side-actions">
+        <button id="btn-file" class="icon" title="Apri file (Ctrl+O)">
+          <svg viewBox="0 0 16 16"><path d="M9.5 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4.5M9.5 1.5 13 5v3M9.5 1.5V5H13M12 10v5M9.5 12.5h5"/></svg>
+        </button>
+        <button id="btn-folder" class="icon" title="Apri cartella (Ctrl+Shift+O)">
+          <svg viewBox="0 0 16 16"><path d="M8 13.5H2.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3.6l1.6 1.8h5.8a1 1 0 0 1 1 1V8M12 10v5M9.5 12.5h5"/></svg>
+        </button>
+        <button id="btn-refresh" class="icon" title="Aggiorna (F5)">
+          <svg viewBox="0 0 16 16"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 1.8v3h-3"/></svg>
+        </button>
+        <button id="btn-theme" class="icon" title="Tema">
+          <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path class="fill" d="M8 2.5a5.5 5.5 0 0 1 0 11z"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="filter">
+      <input id="filter" type="text" placeholder="Filtra i file   Ctrl+P" spellcheck="false" autocomplete="off">
+    </div>
+    <nav id="tree" tabindex="0"></nav>
+  </aside>
+  <div id="resizer" title="Trascina per allargare"></div>
+  <main id="main">
+    <div id="docbar">
+      <div id="crumbs"></div>
+      <div class="doc-actions">
+        <button id="btn-copy-path" class="icon" title="Copia percorso">
+          <svg viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="9" rx="1"/><path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1"/></svg>
+        </button>
+        <button id="btn-reveal" class="icon" title="Mostra nella cartella">
+          <svg viewBox="0 0 16 16"><path d="M1.5 12.5v-9a1 1 0 0 1 1-1h3.6l1.6 1.8h5.8a1 1 0 0 1 1 1v7.2a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM1.5 6.5h13"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="findbar" hidden>
+      <input id="find" type="text" placeholder="Trova nel documento" spellcheck="false" autocomplete="off">
+      <span id="find-count"></span>
+      <button id="find-prev" class="icon" title="Precedente (Maiusc+Invio)"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button>
+      <button id="find-next" class="icon" title="Successivo (Invio)"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></button>
+      <button id="find-close" class="icon" title="Chiudi (Esc)"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <div id="scroller">
+      <article id="content" class="md"></article>
+      <section id="welcome" hidden>
+        <svg class="welcome-mark" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="52" rx="5"/><path d="M19 40V24l7 8 7-8v16M41 24v16M36 35l5 5 5-5"/></svg>
+        <h1>Apri un file o una cartella</h1>
+        <p>I file markdown compaiono a sinistra, già impaginati qui.</p>
+        <div class="welcome-actions">
+          <button id="welcome-file" class="primary">Apri file…</button>
+          <button id="welcome-folder">Apri cartella…</button>
+        </div>
+        <p class="hint">Oppure trascinali nella finestra.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="drop-overlay"><div>Rilascia per aprire</div></div>
+<div id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
