@@ -1,3 +1,5 @@
+<img src="build/appicon.png" width="72" align="right" alt="">
+
 # Leggio
 
 Un visualizzatore di file markdown, e basta. Si aprono file e cartelle, a
@@ -5,7 +7,7 @@ sinistra compare la lista dei `.md`, a destra il documento già impaginato:
 niente editor, niente testo grezzo, niente Docker o vault da configurare.
 Un solo eseguibile per Windows e per Linux.
 
-![icona](build/appicon.png)
+![Leggio su Linux con un README aperto](docs/schermata.png)
 
 ## Cosa fa
 
@@ -29,6 +31,10 @@ Un solo eseguibile per Windows e per Linux.
   cartelle aperte alla prossima partenza.
 
 ## Usarlo
+
+Gli eseguibili sono nella pagina
+[Releases](https://github.com/AndreaSole/leggio/releases): `leggio.exe` per
+Windows, `leggio-linux-amd64` per Linux.
 
 ### Windows
 
@@ -116,3 +122,10 @@ dentro. Il markdown lo converte
 [bluemonday](https://github.com/microcosm-cc/bluemonday). I diagrammi li
 disegna [mermaid](https://mermaid.js.org) (licenza MIT), che sta compresso
 dentro l'eseguibile e si carica solo se un documento ne contiene uno.
+
+## Licenza
+
+MIT, vedi [LICENSE](LICENSE). Le licenze delle librerie incluse negli
+eseguibili (tutte MIT, BSD, ISC o Apache 2.0) sono in
+[THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt); si rigenera con
+`python3 scripts/licenses.py` dopo aver compilato.
