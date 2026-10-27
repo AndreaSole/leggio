@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http: https:; media-src 'self' data: http: https:; font-src 'self' data:; connect-src 'self' ws: wss:">
-<title>Leggio</title>
+<title>MdView</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="/__chroma.css">
 </head>
@@ -12,7 +12,7 @@
 <div id="app">
   <aside id="sidebar">
     <header class="side-head">
-      <span class="side-title">Leggio</span>
+      <span class="side-title">MdView</span>
       <div class="side-actions">
         <button id="btn-file" class="icon" title="Apri file (Ctrl+O)">
           <svg viewBox="0 0 16 16"><path d="M9.5 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4.5M9.5 1.5 13 5v3M9.5 1.5V5H13M12 10v5M9.5 12.5h5"/></svg>
@@ -38,6 +38,9 @@
     <div id="docbar">
       <div id="crumbs"></div>
       <div class="doc-actions">
+        <button id="btn-file-note" class="icon" title="Nota sul file">
+          <svg viewBox="0 0 16 16"><path d="M2.5 3.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-5l-3 2.5v-2.5h-1a1 1 0 0 1-1-1z"/><path d="M8 4.5v4M6 6.5h4"/></svg>
+        </button>
         <button id="btn-copy-path" class="icon" title="Copia percorso">
           <svg viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="9" rx="1"/><path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1"/></svg>
         </button>

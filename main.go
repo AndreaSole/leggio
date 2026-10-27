@@ -22,7 +22,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -51,7 +51,7 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "--version", "-v":
-			fmt.Println("Leggio", version)
+			fmt.Println("MdView", version)
 			return
 		case "--install":
 			exitOn(install())
@@ -83,7 +83,7 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "Leggio",
+		Title:            "MdView",
 		Width:            1180,
 		Height:           800,
 		MinWidth:         520,
@@ -108,12 +108,12 @@ func main() {
 		},
 		Linux: &linux.Options{
 			Icon:             icon,
-			ProgramName:      "leggio",
+			ProgramName:      "mdview",
 			WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand,
 		},
 		Mac: &mac.Options{
 			OnFileOpen: app.onFileOpen,
-			About:      &mac.AboutInfo{Title: "Leggio " + version, Message: "Visualizzatore di file markdown", Icon: icon},
+			About:      &mac.AboutInfo{Title: "MdView " + version, Message: "Visualizzatore di file markdown", Icon: icon},
 		},
 	})
 	exitOn(err)
@@ -121,7 +121,7 @@ func main() {
 
 func exitOn(err error) {
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Leggio:", err)
+		fmt.Fprintln(os.Stderr, "MdView:", err)
 		os.Exit(1)
 	}
 }

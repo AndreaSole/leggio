@@ -31,19 +31,33 @@ import (
 
 // Doc è un file markdown già trasformato in HTML pronto per la vista.
 type Doc struct {
-	Path    string `json:"path"`
-	Title   string `json:"title"`
-	HTML    string `json:"html"`
-	Mermaid bool   `json:"mermaid"`
-	Missing bool   `json:"missing"`
+	Path    string  `json:"path"`
+	Title   string  `json:"title"`
+	HTML    string  `json:"html"`
+	Mermaid bool    `json:"mermaid"`
+	Missing bool    `json:"missing"`
+	Notes   []*Note `json:"notes"`
 }
 
 var (
-	markdown = newMarkdown()
-	policy   = newPolicy()
+	markdown = newMarkdown(false)
+	// Negli appunti un a capo resta un a capo, e i titoli non hanno id: si
+	// confonderebbero con quelli del documento a cui sono attaccati.
+	noteMarkdown = newMarkdown(true)
+	policy       = newPolicy()
 )
 
-func newMarkdown() goldmark.Markdown {
+func newMarkdown(forNotes bool) goldmark.Markdown {
+	var parserOpts []parser.Option
+	rendererOpts := []renderer.Option{
+		gmhtml.WithUnsafe(), // l'HTML grezzo passa, poi lo ripulisce bluemonday
+		renderer.WithNodeRenderers(util.Prioritized(newCodeRenderer(), 100)),
+	}
+	if forNotes {
+		rendererOpts = append(rendererOpts, gmhtml.WithHardWraps())
+	} else {
+		parserOpts = append(parserOpts, parser.WithAutoHeadingID())
+	}
 	return goldmark.New(
 		goldmark.WithExtensions(
 			extension.Linkify,
@@ -54,11 +68,8 @@ func newMarkdown() goldmark.Markdown {
 			emoji.Emoji,
 			extension.NewTable(extension.WithTableCellAlignMethod(extension.TableCellAlignAttribute)),
 		),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-		goldmark.WithRendererOptions(
-			gmhtml.WithUnsafe(), // l'HTML grezzo passa, poi lo ripulisce bluemonday
-			renderer.WithNodeRenderers(util.Prioritized(newCodeRenderer(), 100)),
-		),
+		goldmark.WithParserOptions(parserOpts...),
+		goldmark.WithRendererOptions(rendererOpts...),
 	)
 }
 
@@ -186,6 +197,16 @@ func RenderBytes(data []byte, baseDir string) *Doc {
 	}
 	clean := policy.SanitizeBytes(buf.Bytes())
 	return postProcess(clean, baseDir)
+}
+
+// RenderNote impagina il testo di un appunto; link e immagini relativi
+// valgono rispetto alla cartella del documento.
+func RenderNote(text, baseDir string) string {
+	var buf bytes.Buffer
+	if err := noteMarkdown.Convert([]byte(text), &buf); err != nil {
+		return "<p>" + html.EscapeString(text) + "</p>"
+	}
+	return postProcess(policy.SanitizeBytes(buf.Bytes()), baseDir).HTML
 }
 
 // decodeText porta il testo in UTF-8: toglie il BOM, legge l'UTF-16 che

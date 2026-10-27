@@ -1,4 +1,4 @@
-# Ambiente per compilare Leggio per Linux. Ubuntu 22.04 perché la sua glibc
+# Ambiente per compilare MdView per Linux. Ubuntu 22.04 perché la sua glibc
 # è abbastanza vecchia: l'eseguibile parte anche sulle distribuzioni del 2022.
 ARG BASE=amd64/ubuntu:22.04
 FROM ${BASE}

@@ -15,7 +15,7 @@ root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(root)
 modcache = subprocess.run(["go", "env", "GOMODCACHE"], capture_output=True, text=True, check=True).stdout.strip()
 
-binaries = [b for b in ["build/bin/leggio.exe", "build/bin/leggio-linux-amd64", "build/bin/leggio-linux-arm64"] if os.path.exists(b)]
+binaries = [b for b in ["build/bin/mdview.exe", "build/bin/mdview-linux-amd64", "build/bin/mdview-linux-arm64"] if os.path.exists(b)]
 if not binaries:
     sys.exit("prima compila gli eseguibili in build/bin")
 
@@ -42,8 +42,8 @@ def license_text(path, version):
 
 sep = "\n\n" + "=" * 78 + "\n"
 parts = [
-    "Leggio contiene software di terze parti. Qui sotto le loro licenze.\n"
-    "Leggio stesso è distribuito con licenza MIT (vedi LICENSE)."
+    "MdView contiene software di terze parti. Qui sotto le loro licenze.\n"
+    "MdView stesso è distribuito con licenza MIT (vedi LICENSE)."
 ]
 for path, version in sorted(deps):
     parts.append(f"{path} {version}\n\n{license_text(path, version)}")

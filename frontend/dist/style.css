@@ -29,6 +29,9 @@
   --scroll: rgba(121, 121, 121, .35);
   --shadow: rgba(0, 0, 0, .45);
   --note: #4493f8; --tip: #3fb950; --important: #ab7df8; --warning: #d29922; --caution: #f85149;
+  --memo: #d7a531;
+  --memo-bg: rgba(215, 165, 49, .08);
+  --memo-border: rgba(215, 165, 49, .35);
   color-scheme: dark;
 }
 
@@ -61,6 +64,9 @@
   --scroll: rgba(100, 100, 100, .3);
   --shadow: rgba(0, 0, 0, .16);
   --note: #0969da; --tip: #1a7f37; --important: #8250df; --warning: #9a6700; --caution: #cf222e;
+  --memo: #9a6700;
+  --memo-bg: #fff8e1;
+  --memo-border: #ecd48a;
   color-scheme: light;
 }
 
@@ -179,6 +185,8 @@ button.icon svg .fill { fill: currentColor; stroke: none; }
 .row .label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .row .dim { color: var(--faint); margin-left: 6px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 .row.missing .label { color: var(--faint); text-decoration: line-through; }
+.note-mark { width: 14px; height: 14px; flex: none; margin-left: 4px; color: var(--memo); display: inline-flex; }
+.note-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
 
 .chev, .ficon { width: 16px; height: 16px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
 .chev svg, .ficon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
@@ -234,6 +242,7 @@ button.icon svg .fill { fill: currentColor; stroke: none; }
 #crumbs .seg:last-child { color: var(--fg); flex-shrink: 0; max-width: 70%; }
 #crumbs .sep { margin: 0 4px; color: var(--faint); flex: none; }
 .doc-actions { display: flex; gap: 2px; margin-left: 8px; }
+#btn-file-note.on { color: var(--memo); }
 
 #scroller { flex: 1; overflow: auto; position: relative; }
 #scroller.hidden-doc #content { display: none; }
@@ -313,6 +322,16 @@ button.icon svg .fill { fill: currentColor; stroke: none; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #toast[hidden] { display: none; }
+#toast button {
+  margin-left: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font-weight: 600;
+  cursor: pointer;
+}
+#toast button:hover { text-decoration: underline; }
 
 /* ---------- markdown impaginato ---------- */
 
@@ -466,4 +485,105 @@ button.icon svg .fill { fill: currentColor; stroke: none; }
 
 @media (max-width: 700px) {
   .md { padding: 20px 22px 80px; }
+}
+
+/* ---------- appunti ---------- */
+
+.md :is(h1, h2, h3, h4, h5, h6) { position: relative; }
+.md .note-add {
+  position: absolute;
+  left: -30px;
+  top: calc(.625em - 11px);
+  width: 22px; height: 22px;
+  padding: 3px;
+  border: 0; border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  opacity: 0;
+  display: inline-flex;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.md .note-add svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.md :is(h1, h2, h3, h4, h5, h6):hover .note-add, .md .note-add:focus-visible { opacity: 1; }
+.md .note-add:hover { color: var(--memo); background: var(--memo-bg); }
+
+.md .notes-top { margin-bottom: 1.6em; }
+.md .note {
+  margin: .4em 0 1.2em;
+  padding: 8px 12px 10px;
+  font-size: .92em;
+  line-height: 1.55;
+  border: 1px solid var(--memo-border);
+  border-left: 3px solid var(--memo);
+  border-radius: 4px;
+  background: var(--memo-bg);
+}
+.md .notes-top .note { margin: 0 0 .8em; }
+.md .note-head {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 22px;
+  font-size: .82em;
+  color: var(--muted);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.md .note-icon { display: inline-flex; color: var(--memo); }
+.md .note-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
+.md .note-title { font-weight: 600; color: var(--memo); }
+.md .note-date { color: var(--faint); }
+.md .note-tools { margin-left: auto; display: inline-flex; gap: 2px; opacity: 0; }
+.md .note:hover .note-tools, .md .note-tools:focus-within { opacity: 1; }
+.md .note-tools button {
+  width: 22px; height: 22px; padding: 4px;
+  border: 0; border-radius: 4px;
+  background: transparent; color: var(--muted);
+  cursor: pointer; display: inline-flex;
+}
+.md .note-tools button:hover { background: var(--memo-bg); color: var(--fg); }
+.md .note-tools svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.md .note-body { margin-top: 4px; }
+.md .note-body > :last-child { margin-bottom: 0; }
+.md .note-body p, .md .note-body ul, .md .note-body ol { margin-bottom: .5em; }
+.md .note-body :is(h1, h2, h3, h4, h5, h6) { font-size: 1em; border: 0; padding: 0; margin: .4em 0 .3em; }
+
+.md .note-orphans .orphan { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--memo-border); }
+.md .note-orphans .note-head + .orphan { border-top: 0; padding-top: 0; }
+.md .orphan-head { display: flex; align-items: center; color: var(--muted); font-size: .9em; }
+.md .orphan:hover .note-tools { opacity: 1; }
+
+.md .note-editor textarea {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  margin: 6px 0 8px;
+  padding: 7px 9px;
+  resize: vertical;
+  font: inherit;
+  font-size: 1em;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  outline: none;
+}
+.md .note-editor textarea:focus { border-color: var(--memo); }
+.md .note-actions { display: flex; align-items: center; gap: 8px; user-select: none; -webkit-user-select: none; }
+.md .note-hint { flex: 1; font-size: .8em; color: var(--faint); }
+.md .note-actions button {
+  height: 26px; padding: 0 12px;
+  font-size: .85em;
+  border-radius: 4px;
+  border: 1px solid var(--input-border);
+  background: transparent;
+  cursor: pointer;
+}
+.md .note-actions button:hover { background: var(--hover); }
+.md .note-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.md .note-actions button.primary:hover { filter: brightness(1.1); }
+
+@media (max-width: 700px) {
+  .md .note-add { left: -22px; }
 }

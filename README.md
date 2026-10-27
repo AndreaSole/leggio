@@ -1,13 +1,14 @@
 <img src="build/appicon.png" width="72" align="right" alt="">
 
-# Leggio
+# MdView
 
-Un visualizzatore di file markdown, e basta. Si aprono file e cartelle, a
-sinistra compare la lista dei `.md`, a destra il documento già impaginato:
-niente editor, niente testo grezzo, niente Docker o vault da configurare.
-Un solo eseguibile per Windows e per Linux.
+Un visualizzatore di file markdown. Si aprono file e cartelle, a sinistra
+compare la lista dei `.md`, a destra il documento già impaginato: niente
+editor, niente testo grezzo, niente Docker o vault da configurare. Si possono
+lasciare appunti sui documenti senza toccarli. Un solo eseguibile per Windows
+e per Linux.
 
-![Leggio su Linux con un README aperto](docs/schermata.png)
+![MdView su Linux con un README aperto](docs/schermata.png)
 
 ## Cosa fa
 
@@ -22,10 +23,13 @@ Un solo eseguibile per Windows e per Linux.
 - **Si aggiorna da solo**: se il file cambia su disco la vista si ricarica
   restando allo stesso punto; i file nuovi in una cartella aperta compaiono
   nella lista.
-- **Collegamenti**: un link a un altro `.md` lo apre in Leggio (anche con
+- **Collegamenti**: un link a un altro `.md` lo apre in MdView (anche con
   `#sezione`), i link web vanno nel browser, gli altri file si aprono con il
   loro programma (immagini, PDF, documenti) o si mostrano nella cartella.
-- **Una sola finestra**: aprire un altro file mentre Leggio è aperto lo
+- **Appunti**: una nota sul file intero o un commento su una sezione,
+  scritti in markdown. Restano dentro MdView: il file `.md` non viene mai
+  modificato.
+- **Una sola finestra**: aprire un altro file mentre MdView è aperto lo
   aggiunge alla lista della finestra esistente.
 - Tema chiaro, scuro o automatico; zoom del testo; si ricorda file e
   cartelle aperte alla prossima partenza.
@@ -34,17 +38,17 @@ Un solo eseguibile per Windows e per Linux.
 
 Gli eseguibili sono nella pagina
 [Releases](https://github.com/AndreaSole/leggio/releases): lo `.zip` per
-Windows contiene `leggio.exe`, il `.tar.gz` per Linux `leggio-linux-amd64`
+Windows contiene `mdview.exe`, il `.tar.gz` per Linux `mdview-linux-amd64`
 (c'è anche la versione arm64).
 
 ### Windows
 
 Serve Windows 10 o 11 (il motore WebView2 è già incluso nel sistema).
 
-1. Copia `leggio.exe` dove vuoi, per esempio in `C:\Programmi\Leggio\`.
+1. Copia `mdview.exe` dove vuoi, per esempio in `C:\Programmi\MdView\`.
 2. Per aprire i `.md` con un doppio clic: tasto destro su un file `.md` →
    **Apri con** → **Scegli un'altra app** → **Cerca un'altra app nel PC** →
-   scegli `leggio.exe` e spunta **Usa sempre questa app**.
+   scegli `mdview.exe` e spunta **Usa sempre questa app**.
 
 Si possono anche trascinare file e cartelle sulla finestra o
 sull'eseguibile.
@@ -61,15 +65,30 @@ sudo apt install libwebkit2gtk-4.1-0
 Poi:
 
 ```bash
-chmod +x leggio-linux-amd64
-./leggio-linux-amd64 --install
+chmod +x mdview-linux-amd64
+./mdview-linux-amd64 --install
 ```
 
-`--install` aggiunge Leggio al menu delle applicazioni e lo rende il
+`--install` aggiunge MdView al menu delle applicazioni e lo rende il
 programma predefinito per i `.md` (solo per il tuo utente, niente `sudo`).
 `--uninstall` lo toglie. Se sposti l'eseguibile, rilancia `--install`.
 
-Da terminale: `leggio file.md cartella/ altro.md`.
+Da terminale: `mdview file.md cartella/ altro.md`.
+
+## Appunti
+
+- **Su una sezione**: passa col mouse su un titolo, a sinistra compare
+  l'icona del fumetto; cliccala e scrivi. L'appunto appare sotto il titolo.
+- **Sul file**: l'icona del fumetto nella barra in alto. La nota appare in
+  cima al documento.
+- Si salvano da soli mentre scrivi. <kbd>Ctrl</kbd>+<kbd>Invio</kbd> chiude
+  la casella, <kbd>Esc</kbd> annulla e rimette il testo di prima; per
+  eliminare un appunto c'è il cestino (con *Annulla* per qualche secondo).
+- Nella lista a sinistra un fumetto segna i file che hanno appunti.
+
+Gli appunti sono legati al percorso del file: se lo sposti o lo rinomini non
+lo seguono. Se nel documento cambia un titolo, l'appunto di quella sezione
+finisce in cima, tra gli *appunti su sezioni che non ci sono più*.
 
 ## Scorciatoie
 
@@ -88,7 +107,7 @@ Da terminale: `leggio file.md cartella/ altro.md`.
 
 ## Sicurezza
 
-I file markdown possono contenere HTML. Leggio lo ripulisce come fa GitHub:
+I file markdown possono contenere HTML. MdView lo ripulisce come fa GitHub:
 niente script, iframe, form o stili in linea, e un collegamento in un README
 non può lanciare un programma (gli eseguibili si mostrano nella loro
 cartella, non si aprono). Le immagini remote nei documenti vengono scaricate,
@@ -96,9 +115,14 @@ come su GitHub.
 
 ## Dove salva le cose
 
-Le cartelle e i file aperti, il tema e la larghezza della barra stanno in
-`%AppData%\Leggio\stato.json` su Windows e in `~/.config/Leggio/stato.json`
-su Linux.
+Nella cartella dati di MdView: `%AppData%\MdView\` su Windows,
+`~/.config/MdView/` su Linux.
+
+- `appunti.json`: gli appunti;
+- `stato.json`: cartelle e file aperti, tema, larghezza della barra.
+
+Togliendo MdView basta cancellare quella cartella; se resta, gli appunti
+sono ancora lì alla prossima installazione.
 
 ## Compilare
 
@@ -106,14 +130,14 @@ Serve Go 1.26 e la CLI di [Wails](https://wails.io) v2
 (`go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0`).
 
 ```bash
-wails build -platform windows/amd64 -skipbindings -trimpath   # build/bin/leggio.exe, anche da Mac o Linux
-scripts/build-linux.sh amd64                                  # build/bin/leggio-linux-amd64, dentro Docker
+wails build -platform windows/amd64 -skipbindings -trimpath   # build/bin/mdview.exe, anche da Mac o Linux
+scripts/build-linux.sh amd64                                  # build/bin/mdview-linux-amd64, dentro Docker
 go test ./...
 ```
 
 La versione Linux si compila in Docker su Ubuntu 22.04, così l'eseguibile
 parte anche sulle distribuzioni meno recenti. Sul Mac basta `wails build`
-per avere `Leggio.app`, comodo per provare.
+per avere `MdView.app`, comodo per provare.
 
 Com'è fatto: Go con [Wails](https://wails.io) usa il motore web del sistema
 (WebView2 su Windows, WebKitGTK su Linux), quindi niente Chromium da 150 MB

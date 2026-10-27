@@ -35,6 +35,7 @@ type State struct {
 	UI         UI          `json:"ui"`
 	SystemDark bool        `json:"systemDark"`
 	Sep        string      `json:"sep"`
+	Noted      []string    `json:"noted"` // documenti con almeno un appunto
 }
 
 // Change è la risposta alle azioni: il nuovo stato e il file da mostrare.
@@ -59,6 +60,7 @@ type App struct {
 	folders []*Folder
 	current string
 	ui      UI
+	notes   *NoteStore
 
 	watched    string
 	watchedMod time.Time
@@ -66,7 +68,7 @@ type App struct {
 }
 
 func NewApp(args []string) *App {
-	a := &App{ui: UI{Theme: "auto", SidebarWidth: 260, Zoom: 1}}
+	a := &App{ui: UI{Theme: "auto", SidebarWidth: 260, Zoom: 1}, notes: OpenNotes(notesPath())}
 	a.load()
 	if show := a.addPaths(args); show != "" {
 		a.current = show
@@ -81,7 +83,7 @@ func (a *App) startup(ctx context.Context) {
 	go a.watch()
 }
 
-// onSecondInstance riceve i file aperti mentre Leggio è già in esecuzione.
+// onSecondInstance riceve i file aperti mentre MdView è già in esecuzione.
 func (a *App) onSecondInstance(data secondInstance) {
 	a.external(data.Args)
 	wruntime.WindowUnminimise(a.ctx)
@@ -123,6 +125,7 @@ func (a *App) GetState() *State {
 		UI:         a.ui,
 		SystemDark: systemPrefersDark(),
 		Sep:        string(filepath.Separator),
+		Noted:      a.notes.Noted(),
 	}
 	for _, p := range a.files {
 		_, err := os.Stat(p)
@@ -203,6 +206,10 @@ func (a *App) Render(path string) (*Doc, error) {
 	if err != nil {
 		return nil, err
 	}
+	doc.Notes = a.notes.For(path)
+	for _, n := range doc.Notes {
+		n.HTML = RenderNote(n.Text, filepath.Dir(path))
+	}
 	a.mu.Lock()
 	a.current = path
 	a.watched = path
@@ -210,9 +217,20 @@ func (a *App) Render(path string) (*Doc, error) {
 	a.mu.Unlock()
 	a.save()
 	if a.ctx != nil {
-		wruntime.WindowSetTitle(a.ctx, filepath.Base(path)+" — Leggio")
+		wruntime.WindowSetTitle(a.ctx, filepath.Base(path)+" — MdView")
 	}
 	return doc, nil
+}
+
+// SaveNote scrive l'appunto di una sezione (section = id del titolo) o
+// del file (section vuota). Con il testo vuoto lo cancella e restituisce nil.
+func (a *App) SaveNote(path, section, heading, text string) (*Note, error) {
+	n, err := a.notes.Set(path, section, heading, text)
+	if err != nil || n == nil {
+		return nil, err
+	}
+	n.HTML = RenderNote(n.Text, filepath.Dir(path))
+	return n, nil
 }
 
 // Clear dice che non si sta guardando nessun file.
@@ -222,7 +240,7 @@ func (a *App) Clear() {
 	a.mu.Unlock()
 	a.save()
 	if a.ctx != nil {
-		wruntime.WindowSetTitle(a.ctx, "Leggio")
+		wruntime.WindowSetTitle(a.ctx, "MdView")
 	}
 }
 
@@ -438,7 +456,7 @@ func statePath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(dir, "Leggio", "stato.json")
+	return filepath.Join(dir, "MdView", "stato.json")
 }
 
 func (a *App) load() {

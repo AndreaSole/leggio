@@ -1,6 +1,6 @@
 "use strict";
 
-// Leggio: la barra laterale con i file e il documento impaginato.
+// MdView: la barra laterale con i file e il documento impaginato.
 // Tutto il lavoro sui file lo fa Go (window.go.main.App); qui si disegna.
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +16,7 @@ let state = { files: [], folders: [], current: "", ui: {}, sep: "/" };
 let ui = { theme: "auto", sidebarWidth: 260, sidebarHidden: false, zoom: 1, expanded: [] };
 let current = "";
 let currentDoc = null;
+let notedKeys = new Set();
 let expanded = new Set();
 const scrollMemory = new Map();
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -25,6 +26,10 @@ const ICONS = {
   md: '<svg viewBox="0 0 16 16"><path d="M2.5 4.5h11v7h-11z"/><path d="M4.5 9.5v-3l1.5 1.7 1.5-1.7v3M10.5 6.5v3M9.3 8.4l1.2 1.2 1.2-1.2"/></svg>',
   dir: '<svg viewBox="0 0 16 16"><path d="M1.5 12.5v-9a1 1 0 0 1 1-1h3.6l1.6 1.8h5.8a1 1 0 0 1 1 1v7.2a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z"/></svg>',
   x: '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+  note: '<svg viewBox="0 0 16 16"><path d="M2.5 3.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-5l-3 2.5v-2.5h-1a1 1 0 0 1-1-1z"/></svg>',
+  noteAdd: '<svg viewBox="0 0 16 16"><path d="M2.5 3.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-5l-3 2.5v-2.5h-1a1 1 0 0 1-1-1z"/><path d="M8 4.5v4M6 6.5h4"/></svg>',
+  edit: '<svg viewBox="0 0 16 16"><path d="M10.5 2.5l3 3-7.5 7.5H3v-3z"/></svg>',
+  trash: '<svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>',
 };
 const THEME_ICONS = {
   auto: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path class="fill" d="M8 2.5a5.5 5.5 0 0 1 0 11z"/></svg>',
@@ -71,8 +76,10 @@ function setState(s) {
   state = s;
   state.files = state.files || [];
   state.folders = state.folders || [];
+  state.noted = state.noted || [];
+  notedKeys = new Set(state.noted.map(keyOf));
   // Il ritorno in primo piano riscansiona: se non è cambiato niente non si ridisegna.
-  const key = JSON.stringify([state.files, state.folders]);
+  const key = JSON.stringify([state.files, state.folders, state.noted]);
   if (key === stateKey) return;
   stateKey = key;
   renderTree();
@@ -154,6 +161,13 @@ function fileRow(path, name, depth, onClose) {
   row.innerHTML = `<span class="ficon f-md">${ICONS.md}</span><span class="label"></span>`;
   row.querySelector(".label").textContent = name;
   row.addEventListener("click", () => show(path));
+  if (notedKeys.has(keyOf(path))) {
+    const m = document.createElement("span");
+    m.className = "note-mark";
+    m.title = "Ha degli appunti";
+    m.innerHTML = ICONS.note;
+    row.append(m);
+  }
   if (onClose) row.append(closeButton("Togli dalla lista", onClose));
   return row;
 }
@@ -278,6 +292,15 @@ function markCurrent() {
 // ---------- documento ----------
 
 async function show(path, opts = {}) {
+  if (editor) {
+    // Ricaricare il documento butterebbe via l'appunto che si sta scrivendo.
+    if (samePath(path, current) && opts.keepScroll) {
+      pendingReload = true;
+      return;
+    }
+    pendingReload = false;
+    await finishEditor(true);
+  }
   if (current && !opts.keepScroll) scrollMemory.set(current, scroller.scrollTop);
   const keep = opts.keepScroll ? scroller.scrollTop : null;
   let doc;
@@ -300,9 +323,11 @@ async function show(path, opts = {}) {
     content.innerHTML = `<div class="missing"><h2>File non trovato</h2><p><code></code></p><button>Togli dalla lista</button></div>`;
     content.querySelector("code").textContent = path;
     content.querySelector("button").addEventListener("click", () => api().CloseFile(path).then(onClosed(path)));
+    $("btn-file-note").classList.remove("on");
   } else {
     content.innerHTML = doc.html;
     enhance();
+    placeNotes();
   }
   renderCrumbs(path);
   if (switched) {
@@ -457,6 +482,243 @@ function onLinkClick(e) {
       toast(t.path ? "File non trovato: " + t.path : "Collegamento non apribile: " + href);
     }
   });
+}
+
+// ---------- appunti ----------
+
+// Gli appunti stanno nella cartella dati di MdView, non nel file. Ogni
+// titolo può averne uno, il documento uno in cima (sezione vuota).
+
+let editor = null; // l'appunto in scrittura: { el, section, heading, original, saved, timer, saving }
+let pendingReload = false;
+const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric" });
+
+function docNotes() {
+  return (currentDoc && currentDoc.notes) || [];
+}
+
+function sectionHeadings() {
+  return [...content.querySelectorAll("h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]")].filter((h) => !h.closest(".note"));
+}
+
+function headingText(h) {
+  return h.textContent.trim();
+}
+
+// placeNotes mette ogni appunto sotto il suo titolo; quelli che non trovano
+// più il titolo finiscono in cima, insieme alla nota sul file.
+function placeNotes() {
+  content.querySelectorAll(".notes-top, .note, .note-add").forEach((el) => el.remove());
+  const headings = sectionHeadings();
+  const top = document.createElement("div");
+  top.className = "notes-top";
+  const orphans = [];
+  for (const n of docNotes()) {
+    if (!n.section) {
+      top.prepend(noteCard(n));
+      continue;
+    }
+    const h = headings.find((x) => x.id === n.section) || headings.find((x) => headingText(x) === n.heading);
+    if (h) h.after(noteCard(n));
+    else orphans.push(n);
+  }
+  if (orphans.length) top.append(orphanCard(orphans));
+  if (top.childElementCount) content.prepend(top);
+
+  for (const h of headings) {
+    const b = document.createElement("button");
+    b.className = "note-add";
+    b.title = "Appunto su questa sezione";
+    b.innerHTML = ICONS.noteAdd;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const n = docNotes().find((x) => x.section === h.id);
+      openEditor(h.id, headingText(h), n ? n.text : "", content.querySelector(`.note[data-section="${CSS.escape(h.id)}"]`) || h);
+    });
+    h.prepend(b);
+  }
+  $("btn-file-note").classList.toggle("on", docNotes().some((n) => !n.section));
+}
+
+function noteCard(n) {
+  const el = document.createElement("aside");
+  el.className = "note" + (n.section ? "" : " note-file");
+  el.dataset.section = n.section;
+  el.innerHTML = `<div class="note-head"><span class="note-icon">${ICONS.note}</span><span class="note-title"></span><span class="note-date"></span>
+    <span class="note-tools"><button data-act="edit" title="Modifica">${ICONS.edit}</button><button data-act="del" title="Elimina">${ICONS.trash}</button></span></div>
+    <div class="note-body"></div>`;
+  el.querySelector(".note-title").textContent = n.section ? "Appunto" : "Nota sul file";
+  const when = new Date(n.updated);
+  el.querySelector(".note-date").textContent = dateFmt.format(when);
+  el.querySelector(".note-date").title = when.toLocaleString("it-IT");
+  el.querySelector(".note-body").innerHTML = n.html;
+  el.querySelector('[data-act="edit"]').addEventListener("click", () => {
+    const h = n.section && sectionHeadings().find((x) => x.id === n.section);
+    openEditor(n.section, h ? headingText(h) : n.heading, n.text, el);
+  });
+  el.querySelector('[data-act="del"]').addEventListener("click", () => deleteNote(n));
+  return el;
+}
+
+function orphanCard(notes) {
+  const el = document.createElement("aside");
+  el.className = "note note-orphans";
+  el.innerHTML = `<div class="note-head"><span class="note-icon">${ICONS.note}</span><span class="note-title">Appunti su sezioni che non ci sono più</span></div>`;
+  for (const n of notes) {
+    const item = document.createElement("div");
+    item.className = "orphan";
+    item.innerHTML = `<div class="orphan-head"><span class="orphan-name"></span><span class="note-tools"><button data-act="del" title="Elimina">${ICONS.trash}</button></span></div><div class="note-body"></div>`;
+    item.querySelector(".orphan-name").textContent = "«" + (n.heading || n.section) + "»";
+    item.querySelector(".note-body").innerHTML = n.html;
+    item.querySelector('[data-act="del"]').addEventListener("click", () => deleteNote(n));
+    el.append(item);
+  }
+  return el;
+}
+
+// openEditor apre la casella di scrittura al posto della scheda dell'appunto
+// (o sotto il titolo, o in cima per la nota sul file). Scrivendo si salva da sé.
+async function openEditor(section, heading, text, anchor) {
+  if (editor) {
+    if (editor.section === section) return editor.el.querySelector("textarea").focus();
+    await finishEditor(true);
+    anchor = section ? content.querySelector(`.note[data-section="${CSS.escape(section)}"]`) || sectionHeadings().find((h) => h.id === section) : null;
+  }
+  const el = document.createElement("div");
+  el.className = "note note-editor" + (section ? "" : " note-file");
+  el.innerHTML = `<div class="note-head"><span class="note-icon">${ICONS.note}</span><span class="note-title"></span></div>
+    <textarea rows="3" spellcheck="true" placeholder="Scrivi un appunto… si può usare il markdown"></textarea>
+    <div class="note-actions"><span class="note-hint">Ctrl+Invio per chiudere · Esc per annullare</span><button data-act="cancel">Annulla</button><button data-act="save" class="primary">Fatto</button></div>`;
+  el.querySelector(".note-title").textContent = section ? "Appunto su «" + heading + "»" : "Nota sul file";
+  const ta = el.querySelector("textarea");
+  ta.value = text;
+  editor = { el, section, heading, original: text, saved: text, timer: 0, saving: null };
+
+  if (!section) {
+    const top = content.querySelector(".notes-top") || content.insertBefore(Object.assign(document.createElement("div"), { className: "notes-top" }), content.firstChild);
+    const card = top.querySelector(".note-file");
+    card ? card.replaceWith(el) : top.prepend(el);
+  } else if (anchor && anchor.classList.contains("note")) {
+    anchor.replaceWith(el);
+  } else if (anchor) {
+    anchor.after(el);
+  }
+
+  const fit = () => {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight + 2, 480) + "px";
+  };
+  ta.addEventListener("input", () => {
+    fit();
+    clearTimeout(editor.timer);
+    editor.timer = setTimeout(autosave, 700);
+  });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelEditor();
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      finishEditor(true);
+    }
+  });
+  el.querySelector('[data-act="save"]').addEventListener("click", () => finishEditor(true));
+  el.querySelector('[data-act="cancel"]').addEventListener("click", cancelEditor);
+  fit();
+  el.scrollIntoView({ block: "nearest" });
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+// Salvataggio mentre si scrive: un appunto lasciato a metà non si perde.
+// Il testo vuoto non si salva qui, se no l'appunto sparirebbe mentre lo si riscrive.
+function autosave() {
+  if (!editor) return;
+  const text = editor.el.querySelector("textarea").value;
+  if (!text.trim() || text.trim() === editor.saved.trim()) return;
+  editor.saved = text;
+  storeNote(editor.section, editor.heading, text);
+}
+
+function storeNote(section, heading, text) {
+  const path = current;
+  const p = api().SaveNote(path, section, heading, text).then((n) => {
+    if (!samePath(path, current) || !currentDoc) return;
+    const rest = docNotes().filter((x) => x.section !== section);
+    currentDoc.notes = n ? [...rest, n] : rest;
+    markNoted(path, currentDoc.notes.length > 0);
+  });
+  p.catch((e) => toast("Appunto non salvato: " + e));
+  if (editor && editor.section === section) editor.saving = p;
+  return p;
+}
+
+// finishEditor chiude la casella; con save scrive il testo (vuoto = cancella).
+async function finishEditor(save) {
+  if (!editor) return;
+  const ed = editor;
+  clearTimeout(ed.timer);
+  const text = ed.el.querySelector("textarea").value;
+  try {
+    if (ed.saving) await ed.saving;
+    if (save && text.trim() !== ed.saved.trim()) await storeNote(ed.section, ed.heading, text);
+  } catch {}
+  editor = null;
+  placeNotes();
+  if (pendingReload) {
+    pendingReload = false;
+    show(current, { keepScroll: true });
+  }
+}
+
+// Annulla rimette il testo di prima, anche se intanto si era già salvato.
+async function cancelEditor() {
+  if (!editor) return;
+  const ed = editor;
+  clearTimeout(ed.timer);
+  try {
+    if (ed.saving) await ed.saving;
+    if (ed.saved.trim() !== ed.original.trim()) await storeNote(ed.section, ed.heading, ed.original);
+  } catch {}
+  ed.saving = null;
+  await finishEditor(false);
+}
+
+async function deleteNote(n) {
+  await storeNote(n.section, n.heading, "");
+  await refreshNotes();
+  const path = current;
+  toast("Appunto eliminato", {
+    label: "Annulla",
+    run: async () => {
+      if (!samePath(path, current)) return;
+      await storeNote(n.section, n.heading, n.text);
+      await refreshNotes();
+    },
+  });
+}
+
+// refreshNotes ridisegna gli appunti; una casella aperta si chiude salvando.
+async function refreshNotes() {
+  if (editor) await finishEditor(true);
+  else placeNotes();
+}
+
+function markNoted(path, has) {
+  const k = keyOf(path);
+  if (has === notedKeys.has(k)) return;
+  state.noted = has ? [...state.noted, path] : state.noted.filter((p) => keyOf(p) !== k);
+  notedKeys = new Set(state.noted.map(keyOf));
+  stateKey = "";
+  setState(state);
+}
+
+function openFileNote() {
+  if (!currentDoc || currentDoc.missing) return;
+  const n = docNotes().find((x) => !x.section);
+  openEditor("", "", n ? n.text : "", null);
+  scroller.scrollTop = 0;
 }
 
 // ---------- cerca nel documento ----------
@@ -654,12 +916,21 @@ function copyText(text) {
 }
 
 let toastTimer = 0;
-function toast(msg) {
+function toast(msg, action) {
   const t = $("toast");
   t.textContent = msg;
+  if (action) {
+    const b = document.createElement("button");
+    b.textContent = action.label;
+    b.addEventListener("click", () => {
+      t.hidden = true;
+      action.run();
+    });
+    t.append(b);
+  }
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 2200);
+  toastTimer = setTimeout(() => (t.hidden = true), action ? 6000 : 2200);
 }
 
 function openFile() {
@@ -722,7 +993,7 @@ function setCursor(row) {
 function onKey(e) {
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
-  const inField = e.target instanceof HTMLInputElement;
+  const inField = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
 
   if (mod && k === "o") { e.preventDefault(); return e.shiftKey ? openFolder() : openFile(); }
   if (mod && k === "p") { e.preventDefault(); filterInput.focus(); filterInput.select(); return; }
@@ -751,6 +1022,7 @@ $("welcome-folder").addEventListener("click", openFolder);
 $("btn-refresh").addEventListener("click", refresh);
 $("btn-theme").addEventListener("click", cycleTheme);
 $("btn-reveal").addEventListener("click", () => current && api().Reveal(current));
+$("btn-file-note").addEventListener("click", openFileNote);
 $("btn-copy-path").addEventListener("click", () => {
   if (!current) return;
   copyText(current);

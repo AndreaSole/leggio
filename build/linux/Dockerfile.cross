@@ -1,4 +1,4 @@
-# Compila Leggio per Linux amd64 da una macchina arm64 (Mac Apple Silicon):
+# Compila MdView per Linux amd64 da una macchina arm64 (Mac Apple Silicon):
 # Go e gcc girano nativi, le librerie GTK/WebKit sono quelle amd64 di Ubuntu
 # installate accanto (multiarch). Emulare l'amd64 con QEMU invece fa
 # crollare il compilatore Go.

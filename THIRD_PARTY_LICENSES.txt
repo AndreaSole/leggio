@@ -1,5 +1,5 @@
-Leggio contiene software di terze parti. Qui sotto le loro licenze.
-Leggio stesso è distribuito con licenza MIT (vedi LICENSE).
+MdView contiene software di terze parti. Qui sotto le loro licenze.
+MdView stesso è distribuito con licenza MIT (vedi LICENSE).
 
 ==============================================================================
 git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3

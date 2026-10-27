@@ -1,14 +1,14 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "Leggio",
-  "outputfilename": "leggio",
+  "name": "MdView",
+  "outputfilename": "mdview",
   "frontend:dir": "frontend",
   "frontend:install": "",
   "frontend:build": "",
   "wailsjsdir": "./frontend",
   "info": {
-    "productName": "Leggio",
-    "productVersion": "0.1.0",
+    "productName": "MdView",
+    "productVersion": "0.2.0",
     "comments": "Visualizzatore di file markdown"
   }
 }
